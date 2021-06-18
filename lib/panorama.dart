@@ -47,6 +47,7 @@ class Panorama extends StatefulWidget {
     this.onLongPressEnd,
     this.child,
     this.hotspots,
+    this.correction
   }) : super(key: key);
 
   /// The initial latitude, in degrees, between -90 and 90. default to 0 (the vertical center of the image).
@@ -54,6 +55,9 @@ class Panorama extends StatefulWidget {
 
   /// The initial longitude, in degrees, between -180 and 180. default to 0 (the horizontal center of the image).
   final double longitude;
+
+  /// The orientation correction in degrees to be used with Images XMP data.
+  final Vector3? correction;
 
   /// The initial zoom, default to 1.0.
   final double zoom;
@@ -198,6 +202,7 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
 
   void _updateView() {
     if (scene == null) return;
+
     // auto rotate
     longitudeDelta += 0.001 * widget.animSpeed;
     // animate vertical rotating
@@ -219,6 +224,7 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     Quaternion q = Quaternion.axisAngle(Vector3(0, 0, 1), screenOrientation);
     // rotate for device orientation
     q *= Quaternion.euler(-orientation.z, -orientation.y, -orientation.x);
+
     // rotate to latitude zero
     q *= Quaternion.axisAngle(Vector3(1, 0, 0), math.pi * 0.5);
 
@@ -290,10 +296,11 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     }
   }
 
-  void _updateTexture(ImageInfo imageInfo, bool synchronousCall) {
+  void _updateTexture(ImageInfo imageInfo, bool synchronousCall) async {
     surface?.mesh.texture = imageInfo.image;
     surface?.mesh.textureRect = Rect.fromLTWH(0, 0, imageInfo.image.width.toDouble(), imageInfo.image.height.toDouble());
     scene!.texture = imageInfo.image;
+
     scene!.update();
   }
 
@@ -314,7 +321,12 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     scene.camera.position.setFrom(Vector3(0, 0, 0.1));
     if (widget.child != null) {
       final Mesh mesh = generateSphereMesh(radius: _radius, latSegments: widget.latSegments, lonSegments: widget.lonSegments, croppedArea: widget.croppedArea, croppedFullWidth: widget.croppedFullWidth, croppedFullHeight: widget.croppedFullHeight);
-      surface = Object(name: 'surface', mesh: mesh, backfaceCulling: false);
+      surface = Object(
+          name: 'surface',
+          mesh: mesh,
+          backfaceCulling: false,
+          rotation: widget.correction ?? Vector3(0, 0, 0)
+      );
       _loadTexture(widget.child!.image);
       scene.world.add(surface!);
       _updateView();
