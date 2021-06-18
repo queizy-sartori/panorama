@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:panorama/panorama.dart';
 import 'package:vector_math/vector_math_64.dart';
-import 'dart:math';
 
 void main() => runApp(MyApp());
 
@@ -28,10 +26,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final rotatedImage = "https://firebasestorage.googleapis.com/v0/b/constructin-15d0f.appspot.com/o/projects%2Fcaptures%2Fd7f2a7f4-a5b3-48f9-bfeb-69747f874d23.jpeg?alt=media&token=5fddf914-8a06-49a1-be67-350bb4ec98c5";
-
-  double toRadians(double degrees) {
-    return degrees * pi/180;
-  }
 
   @override
   Widget build(BuildContext context) {
