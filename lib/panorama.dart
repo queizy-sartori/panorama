@@ -47,7 +47,8 @@ class Panorama extends StatefulWidget {
     this.onLongPressEnd,
     this.child,
     this.hotspots,
-    this.correction
+    this.correction,
+    this.loader
   }) : super(key: key);
 
   /// The initial latitude, in degrees, between -90 and 90. default to 0 (the vertical center of the image).
@@ -131,6 +132,9 @@ class Panorama extends StatefulWidget {
   /// Place widgets in the panorama.
   final List<Hotspot>? hotspots;
 
+  /// Specify a custom loading widget to show while image is loading
+  final Widget? loader;
+
   @override
   _PanoramaState createState() => _PanoramaState();
 }
@@ -156,6 +160,7 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
   late StreamController<Null> _streamController;
   Stream<Null>? _stream;
   ImageStream? _imageStream;
+  bool _loading = false;
 
   void _handleTapUp(TapUpDetails details) {
     final Vector3 o = positionToLatLon(details.localPosition.dx, details.localPosition.dy);
@@ -301,11 +306,19 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     surface?.mesh.textureRect = Rect.fromLTWH(0, 0, imageInfo.image.width.toDouble(), imageInfo.image.height.toDouble());
     scene!.texture = imageInfo.image;
 
+    setState(() {
+      _loading = false;
+    });
+
     scene!.update();
   }
 
   void _loadTexture(ImageProvider? provider) {
     if (provider == null) return;
+    setState(() {
+      _loading = true;
+    });
+
     _imageStream?.removeListener(ImageStreamListener(_updateTexture));
     _imageStream = provider.resolve(ImageConfiguration());
     ImageStreamListener listener = ImageStreamListener(_updateTexture);
@@ -434,6 +447,10 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return widget.loader ?? Container();
+    }
+
     Widget pano = Stack(
       children: [
         Cube(interactive: false, onSceneCreated: _onSceneCreated),

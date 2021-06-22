@@ -36,8 +36,10 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Stack(
         children: [
           Panorama(
-            correction: Vector3(0, 0, 90),
-            child: Image.network(rotatedImage)
+            loader: Center(child: Text("Loading...")),
+            child: Image.network(
+                rotatedImage
+            )
           ),
         ],
       )
