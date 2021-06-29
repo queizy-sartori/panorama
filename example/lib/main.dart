@@ -26,6 +26,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final rotatedImage = "https://firebasestorage.googleapis.com/v0/b/constructin-15d0f.appspot.com/o/projects%2Fcaptures%2Fd7f2a7f4-a5b3-48f9-bfeb-69747f874d23.jpeg?alt=media&token=5fddf914-8a06-49a1-be67-350bb4ec98c5";
+  final normalImage = "https://firebasestorage.googleapis.com/v0/b/constructin-15d0f.appspot.com/o/projects%2Fcaptures%2F2fb50a47-3ca4-4b1a-90c9-6790fc412db0.png?alt=media&token=957a5033-bd9c-45c0-b42f-8a9ee31faf94";
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +39,10 @@ class _MyHomePageState extends State<MyHomePage> {
           Panorama(
             loader: Center(child: Text("Loading...")),
             child: Image.network(
-                rotatedImage
-            )
+                normalImage
+            ),
+            latitude: 1.8,
+            longitude: 116,
           ),
         ],
       )
