@@ -18,30 +18,41 @@ enum SensorControl {
   AbsoluteOrientation,
 }
 
-class PanoramaCoordinates {
+class PanoramaSyncCoordinates {
   /// latitude diff in degrees
   double latitudeDiff;
 
   /// longitude diff in degrees
   double longitudeDiff;
 
-  PanoramaCoordinates({this.latitudeDiff = 0, this.longitudeDiff = 0});
-
+  /// latitude diff in radians
   double get latitudeDiffInRadians => radians(latitudeDiff);
 
+  /// longitude diff in radians
   double get longitudeDiffInRadians => radians(longitudeDiff);
+
+  PanoramaSyncCoordinates({this.latitudeDiff = 0, this.longitudeDiff = 0});
 }
 
 class PanoramaSync {
-  final StreamController<PanoramaCoordinates>? from;
+  final StreamController<PanoramaSyncCoordinates>? from;
 
-  final StreamController<PanoramaCoordinates>? to;
+  final StreamController<PanoramaSyncCoordinates>? to;
 
   PanoramaSync({this.from, this.to});
 
+  bool get canSyncTo => to != null && !to!.isClosed;
+
+  bool get canSyncFrom => from != null && !from!.isClosed;
+
   dispose() {
-    from?.close();
-    to?.close();
+    if (canSyncFrom) {
+      from!.close();
+    }
+
+    if (canSyncTo) {
+      to!.close();
+    }
   }
 }
 
@@ -306,10 +317,10 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     q.rotate(scene!.camera.up..setFrom(Vector3(0, 1, 0)));
     scene!.update();
 
-    if (sync && !(widget.sync?.to?.isClosed ?? true)) {
-      widget.sync?.to?.add(PanoramaCoordinates(
-          latitudeDiff: -(lastLatitude - degrees(-o.y)),
-          longitudeDiff: -(lastLongitude - degrees(o.x))
+    if (sync && widget.sync != null && widget.sync!.canSyncTo) {
+      widget.sync!.to!.add(PanoramaSyncCoordinates(
+          latitudeDiff: -(lastLatitude - degrees(latitude)),
+          longitudeDiff: -(lastLongitude - degrees(longitude))
       ));
     }
 
@@ -447,7 +458,7 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     return Stack(children: widgets);
   }
 
-  void _handleSyncedCoordinates(PanoramaCoordinates? coordinates) {
+  void _handleSyncedCoordinates(PanoramaSyncCoordinates? coordinates) {
     if (coordinates?.latitudeDiff == 0 && coordinates?.longitudeDiff == 0) {
       return;
     }
@@ -471,7 +482,9 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     _controller = AnimationController(duration: Duration(milliseconds: 60000), vsync: this)..addListener(_updateView);
     if (widget.sensorControl != SensorControl.None || widget.animSpeed != 0) _controller.repeat();
 
-    widget.sync?.from?.stream.listen(_handleSyncedCoordinates);
+    if (widget.sync != null && widget.sync!.canSyncFrom) {
+      widget.sync!.from!.stream.listen(_handleSyncedCoordinates);
+    }
   }
 
   @override
@@ -496,8 +509,17 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     if (widget.child?.image != oldWidget.child?.image) {
       _loadTexture(widget.child?.image);
     }
+
     if (widget.sensorControl != oldWidget.sensorControl) {
       _updateSensorControl();
+    }
+
+    if (widget.sync != oldWidget.sync && widget.sync != null && widget.sync!.canSyncFrom) {
+      if (oldWidget.sync != null) {
+        oldWidget.sync!.dispose();
+      }
+
+      widget.sync!.from!.stream.listen(_handleSyncedCoordinates);
     }
   }
 

@@ -30,8 +30,8 @@ class _MyHomePageState extends State<MyHomePage> {
   final rotatedImage = "https://firebasestorage.googleapis.com/v0/b/constructin-15d0f.appspot.com/o/projects%2Fcaptures%2Fd7f2a7f4-a5b3-48f9-bfeb-69747f874d23.jpeg?alt=media&token=5fddf914-8a06-49a1-be67-350bb4ec98c5";
   final normalImage = "https://firebasestorage.googleapis.com/v0/b/constructin-15d0f.appspot.com/o/projects%2Fcaptures%2F2fb50a47-3ca4-4b1a-90c9-6790fc412db0.png?alt=media&token=957a5033-bd9c-45c0-b42f-8a9ee31faf94";
 
-  StreamController<PanoramaCoordinates>? upController;
-  StreamController<PanoramaCoordinates>? downController;
+  StreamController<PanoramaSyncCoordinates>? upController;
+  StreamController<PanoramaSyncCoordinates>? downController;
 
   PanoramaSync? upToDownSync;
   PanoramaSync? downToUpSync;
@@ -39,8 +39,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-
-    _startSync();
   }
 
   _closeSync() {
@@ -48,14 +46,16 @@ class _MyHomePageState extends State<MyHomePage> {
     upController?.close();
 
     setState(() {
+      upController = null;
+      downController = null;
       upToDownSync = null;
       downToUpSync = null;
     });
   }
 
   _startSync() {
-    downController = StreamController<PanoramaCoordinates>();
-    upController = StreamController<PanoramaCoordinates>();
+    downController = StreamController<PanoramaSyncCoordinates>();
+    upController = StreamController<PanoramaSyncCoordinates>();
 
     setState(() {
       upToDownSync = PanoramaSync(
@@ -116,13 +116,13 @@ class _MyHomePageState extends State<MyHomePage> {
           Row(
             children: [
               ElevatedButton(
-                onPressed: _closeSync,
-                child: Text("Stop")
+                onPressed: _startSync,
+                child: Text("lock")
               ),
 
               ElevatedButton(
-                  onPressed: _startSync,
-                  child: Text("Start")
+                  onPressed: _closeSync,
+                  child: Text("unlock")
               ),
             ],
           )
