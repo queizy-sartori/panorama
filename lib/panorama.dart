@@ -18,6 +18,33 @@ enum SensorControl {
   AbsoluteOrientation,
 }
 
+class PanoramaCoordinates {
+  /// latitude diff in degrees
+  double latitudeDiff;
+
+  /// longitude diff in degrees
+  double longitudeDiff;
+
+  PanoramaCoordinates({this.latitudeDiff = 0, this.longitudeDiff = 0});
+
+  double get latitudeDiffInRadians => radians(latitudeDiff);
+
+  double get longitudeDiffInRadians => radians(longitudeDiff);
+}
+
+class PanoramaSync {
+  final StreamController<PanoramaCoordinates>? from;
+
+  final StreamController<PanoramaCoordinates>? to;
+
+  PanoramaSync({this.from, this.to});
+
+  dispose() {
+    from?.close();
+    to?.close();
+  }
+}
+
 class Panorama extends StatefulWidget {
   Panorama({
     Key? key,
@@ -48,7 +75,8 @@ class Panorama extends StatefulWidget {
     this.child,
     this.hotspots,
     this.correction,
-    this.loader
+    this.loader,
+    this.sync
   }) : super(key: key);
 
   /// The initial latitude, in degrees, between -90 and 90. default to 0 (the vertical center of the image).
@@ -135,6 +163,9 @@ class Panorama extends StatefulWidget {
   /// Specify a custom loading widget to show while image is loading
   final Widget? loader;
 
+  /// Use to sync multiple panoramas movements
+  final PanoramaSync? sync;
+
   @override
   _PanoramaState createState() => _PanoramaState();
 }
@@ -205,8 +236,10 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     }
   }
 
-  void _updateView() {
+  void _updateView({bool sync = true}) {
     if (scene == null) return;
+    final lastLatitude = degrees(latitude);
+    final lastLongitude = degrees(longitude);
 
     // auto rotate
     longitudeDelta += 0.001 * widget.animSpeed;
@@ -272,6 +305,14 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     q.rotate(scene!.camera.target..setFrom(Vector3(0, 0, -_radius)));
     q.rotate(scene!.camera.up..setFrom(Vector3(0, 1, 0)));
     scene!.update();
+
+    if (sync && !(widget.sync?.to?.isClosed ?? true)) {
+      widget.sync?.to?.add(PanoramaCoordinates(
+          latitudeDiff: -(lastLatitude - degrees(-o.y)),
+          longitudeDiff: -(lastLongitude - degrees(o.x))
+      ));
+    }
+
     _streamController.add(null);
   }
 
@@ -338,7 +379,7 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
           name: 'surface',
           mesh: mesh,
           backfaceCulling: false,
-          rotation: widget.correction ?? Vector3(0, 0, 0)
+          rotation: widget.correction
       );
       _loadTexture(widget.child!.image);
       scene.world.add(surface!);
@@ -406,6 +447,17 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     return Stack(children: widgets);
   }
 
+  void _handleSyncedCoordinates(PanoramaCoordinates? coordinates) {
+    if (coordinates?.latitudeDiff == 0 && coordinates?.longitudeDiff == 0) {
+      return;
+    }
+
+    latitude += coordinates?.latitudeDiffInRadians ?? 0;
+    longitude += coordinates?.longitudeDiffInRadians ?? 0;
+
+    _updateView(sync: false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -418,6 +470,8 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
 
     _controller = AnimationController(duration: Duration(milliseconds: 60000), vsync: this)..addListener(_updateView);
     if (widget.sensorControl != SensorControl.None || widget.animSpeed != 0) _controller.repeat();
+
+    widget.sync?.from?.stream.listen(_handleSyncedCoordinates);
   }
 
   @override
@@ -427,6 +481,8 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     _screenOrientSubscription?.cancel();
     _controller.dispose();
     _streamController.close();
+    widget.sync?.dispose();
+
     super.dispose();
   }
 
@@ -464,15 +520,17 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
     );
 
     return widget.interactive
-        ? GestureDetector(
-            onScaleStart: _handleScaleStart,
-            onScaleUpdate: _handleScaleUpdate,
-            onTapUp: widget.onTap == null ? null : _handleTapUp,
-            onLongPressStart: widget.onLongPressStart == null ? null : _handleLongPressStart,
-            onLongPressMoveUpdate: widget.onLongPressMoveUpdate == null ? null : _handleLongPressMoveUpdate,
-            onLongPressEnd: widget.onLongPressEnd == null ? null : _handleLongPressEnd,
-            child: pano,
-          )
+        ? ClipRect(
+          child: GestureDetector(
+              onScaleStart: _handleScaleStart,
+              onScaleUpdate: _handleScaleUpdate,
+              onTapUp: widget.onTap == null ? null : _handleTapUp,
+              onLongPressStart: widget.onLongPressStart == null ? null : _handleLongPressStart,
+              onLongPressMoveUpdate: widget.onLongPressMoveUpdate == null ? null : _handleLongPressMoveUpdate,
+              onLongPressEnd: widget.onLongPressEnd == null ? null : _handleLongPressEnd,
+              child: pano,
+            ),
+        )
         : pano;
   }
 }
@@ -545,9 +603,6 @@ Mesh generateSphereMesh({num radius = 1.0, int latSegments = 16, int lonSegments
 }
 
 Vector3 quaternionToOrientation(Quaternion q) {
-  // final Matrix4 m = Matrix4.compose(Vector3.zero(), q, Vector3.all(1.0));
-  // final Vector v = motionSensors.getOrientation(m);
-  // return Vector3(v.z, v.y, v.x);
   final storage = q.storage;
   final double x = storage[0];
   final double y = storage[1];
