@@ -178,10 +178,10 @@ class Panorama extends StatefulWidget {
   final PanoramaSync? sync;
 
   @override
-  _PanoramaState createState() => _PanoramaState();
+  PanoramaState createState() => PanoramaState();
 }
 
-class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin {
+class PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin {
   Scene? scene;
   Object? surface;
   late double latitude;
@@ -456,6 +456,13 @@ class _PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin
       }
     }
     return Stack(children: widgets);
+  }
+
+  moveTo(double lon, double lat) {
+    latitude = radians(lat);
+    longitude = radians(lon);
+    
+    _updateView();
   }
 
   void _handleSyncedCoordinates(PanoramaSyncCoordinates? coordinates) {

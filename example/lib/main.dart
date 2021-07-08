@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:panorama/panorama.dart';
-import 'package:vector_math/vector_math_64.dart';
 
 void main() => runApp(MyApp());
 
@@ -35,6 +34,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   PanoramaSync? upToDownSync;
   PanoramaSync? downToUpSync;
+
+  GlobalKey<PanoramaState> upsideKey = GlobalKey<PanoramaState>();
 
   @override
   void initState() {
@@ -77,6 +78,10 @@ class _MyHomePageState extends State<MyHomePage> {
     _closeSync();
   }
 
+  _onTap(double longitude, double latitude, _) {
+      upsideKey.currentState?.moveTo(longitude, latitude);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,8 +95,9 @@ class _MyHomePageState extends State<MyHomePage> {
               Container(
                 height: 300,
                 child: Panorama(
-                  key: Key("1"),
+                  key: upsideKey,
                   sync: upToDownSync,
+                  onTap: _onTap,
                   loader: Center(child: Text("Loading...")),
                   child: Image.network(
                       normalImage
