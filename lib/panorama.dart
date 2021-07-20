@@ -532,9 +532,7 @@ class PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin 
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return widget.loader ?? Container();
-    }
+    final Widget loader = widget.loader ?? Container();
 
     Widget pano = Stack(
       children: [
@@ -545,6 +543,8 @@ class PanoramaState extends State<Panorama> with SingleTickerProviderStateMixin 
             return buildHotspotWidgets(widget.hotspots);
           },
         ),
+
+        _loading ? loader : Container()
       ],
     );
 
